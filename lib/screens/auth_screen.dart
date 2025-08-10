@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -9,15 +10,38 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
-
-  final _formKey = GlobalKey<FormState>();
   String _enteredPassword = "";
   String _enteredEmail = "";
+  static final _firebase = FirebaseAuth.instance;
+  final _formKey = GlobalKey<FormState>();
 
-  void _submit() {
+  void _submit() async {
     final isValid = _formKey.currentState!.validate();
-    if (isValid) {
+
+    try {
+      if (!isValid) return;
       _formKey.currentState!.save();
+      if (_isLogin) {
+        final userCredentials = await _firebase.signInWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
+        
+      } else {
+        final userCredentials = await _firebase.createUserWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
+      }
+    } on FirebaseAuthException catch (error) {
+      if (error.message == "email-already-in-use") {}
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.message ?? "Fail on Auth, try again later"),
+        ),
+      );
     }
   }
 
@@ -75,7 +99,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             keyboardType: TextInputType.visiblePassword,
                             obscureText: true,
                             onSaved: (newValue) {
-                              _enteredEmail = newValue ?? "";
+                              _enteredPassword = newValue ?? "";
                             },
                             decoration: InputDecoration(labelText: "Password"),
 

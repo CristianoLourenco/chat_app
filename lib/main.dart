@@ -1,5 +1,8 @@
 import 'package:chat/firebase_options.dart';
 import 'package:chat/screens/auth_screen.dart';
+import 'package:chat/screens/chat_screen.dart';
+import 'package:chat/screens/splash_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -21,7 +24,19 @@ class App extends StatelessWidget {
           seedColor: const Color.fromARGB(255, 63, 17, 177),
         ),
       ),
-      home: const AuthScreen(),
+      // const AuthScreen(),
+      home: StreamBuilder(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SplashScreen();
+          }
+          if (snapshot.hasData) {
+            return const ChatScreen();
+          }
+          return const AuthScreen();
+        },
+      ),
     );
   }
 }
