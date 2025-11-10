@@ -65,6 +65,8 @@ class DefaultFirebaseOptions {
     projectId: 'chat-e2762',
     databaseURL: 'https://chat-e2762-default-rtdb.firebaseio.com',
     storageBucket: 'chat-e2762.firebasestorage.app',
+    androidClientId: '391603698891-o2bunnve7c13hpc08n9h60ue4u1qrmgs.apps.googleusercontent.com',
+    iosClientId: '391603698891-krciou3v1il5djhre1oo5hu0t5m0b7e3.apps.googleusercontent.com',
     iosBundleId: 'com.example.chat',
   );
 

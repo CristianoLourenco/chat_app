@@ -1,3 +1,6 @@
+import 'package:chat/firebase_options.dart';
+import 'package:chat/util/validation_util.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +15,9 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
   String _enteredPassword = "";
   String _enteredEmail = "";
+  String _enteredUsername = "";
+  bool isLoading = false;
+
   static final _firebase = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
 
@@ -21,18 +27,29 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       if (!isValid) return;
       _formKey.currentState!.save();
+      setState(() {
+        isLoading = true;
+      });
+
       if (_isLogin) {
         final userCredentials = await _firebase.signInWithEmailAndPassword(
           email: _enteredEmail,
           password: _enteredPassword,
         );
-        
       } else {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
           email: _enteredEmail,
           password: _enteredPassword,
         );
+        await FirebaseFirestore.instanceFor(
+          app: _firebase.app,
+        ).collection('users').doc(userCredentials.user?.uid).set({
+          'username': _enteredUsername,
+          'email': _enteredEmail,
+          'image_url': '....',
+        });
       }
+      return;
     } on FirebaseAuthException catch (error) {
       if (error.message == "email-already-in-use") {}
       if (!mounted) return;
@@ -42,7 +59,17 @@ class _AuthScreenState extends State<AuthScreen> {
           content: Text(error.message ?? "Fail on Auth, try again later"),
         ),
       );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Fail on Auth, try again later $e")),
+      );
     }
+
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override
@@ -85,16 +112,21 @@ class _AuthScreenState extends State<AuthScreen> {
                             decoration: InputDecoration(
                               labelText: "Email Address",
                             ),
-
-                            validator: (val) {
-                              if (val == null ||
-                                  val.trim().isEmpty ||
-                                  !val.contains("@")) {
-                                return "Please enter a valid email address";
-                              }
-                              return null;
-                            },
+                            validator: ValidationUtil.email,
                           ),
+                          if (!_isLogin)
+                            TextFormField(
+                              keyboardType: TextInputType.name,
+                              autocorrect: false,
+                              textCapitalization: TextCapitalization.none,
+                              onSaved: (newValue) {
+                                _enteredUsername = newValue ?? "";
+                              },
+                              decoration: InputDecoration(
+                                labelText: "username",
+                              ),
+                              validator: ValidationUtil.username,
+                            ),
                           TextFormField(
                             keyboardType: TextInputType.visiblePassword,
                             obscureText: true,
@@ -102,13 +134,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               _enteredPassword = newValue ?? "";
                             },
                             decoration: InputDecoration(labelText: "Password"),
-
-                            validator: (val) {
-                              if (val == null || val.trim().length < 6) {
-                                return "Password must be at laest 6 characters long";
-                              }
-                              return null;
-                            },
+                            validator: ValidationUtil.password,
                           ),
                           SizedBox(height: 12),
                           ElevatedButton(
@@ -119,7 +145,10 @@ class _AuthScreenState extends State<AuthScreen> {
                                     context,
                                   ).colorScheme.primaryContainer,
                             ),
-                            child: Text(_isLogin ? 'Login' : "Signup"),
+                            child:
+                                isLoading
+                                    ? Center(child: CircularProgressIndicator())
+                                    : Text(_isLogin ? 'Login' : "Signup"),
                           ),
                           TextButton(
                             onPressed: () {
